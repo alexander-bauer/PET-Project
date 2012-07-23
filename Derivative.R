@@ -11,7 +11,7 @@ SmoothCurve <- function(t, tissue, plasma, V0) {
   
   temp <- tac > 0.90 * tac.max
   ninetymax <- t[temp][1]
-  endninetymax <- tail(t[temp], 1)
+  endninetymax <- tail(t[temp], 1)  
   
   temp <- tac == tac.max
   max <- t[temp]
@@ -47,14 +47,12 @@ SmoothEnd <- function(t, tissue, plasma, V0, t1, t2) {
   return(GetDerivative(t, tissue, plasma, V0, t1, t2, 0.4, 1, 7, 51))
 }
 
-GetDerivative <- function(t, tissue, plasma, V0, t1, t2, greed, degree, bandwidth, gridsize=51L){
+GetDerivative <- function(t, tissue, plasma, V0, t1, t2,
+                          greed, degree, bandwidth, gridsize=51L) {
   idx <- SliceTAC(t,c(t1,t2),greed)[[1]]
   brain.rac <- pmax(0, tissue - V0 * plasma)
   d.dt <- locpoly(t[idx],brain.rac[idx],drv=1,degree=degree,
                   bandwidth=bandwidth, gridsize=gridsize)
-  d.dt.ideal <- locpoly(t[idx],brain.rac.ideal[idx],drv=1,degree=degree,
-                        bandwidth=bandwidth, gridsize=gridsize)
-  target <- approx(t[idx],target[idx],xout=d.dt$x)
   
-  return(cbind(d.dt$x, d.dt$y, target$y, d.dt.ideal$y))
+  return(cbind(d.dt$x, d.dt$y))
 }

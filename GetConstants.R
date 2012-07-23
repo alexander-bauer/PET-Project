@@ -17,8 +17,8 @@
 # V0 near the maximum possible values (determined by m.star > V0*ca.star,)
 # hence may suffer from statistical bias of some sort.
 
-K1andV0 <- function(t, ca.star, m.star, Ve){
-  # Estimates K1 and V0, assuming negligible binding between bolus onset
+GetConstants <- function(t, ca.star, m.star, Ve){
+  # Estimates K1, k2, and V0, assuming negligible binding between bolus onset
   # and the time at which plasma activity declines to half its peak value.
   #
   # Args:
@@ -29,10 +29,12 @@ K1andV0 <- function(t, ca.star, m.star, Ve){
   #   from analysis of cerebellum TAC
   #
   # Returns:
-  #   a vector of values V0 and K1, respectively.
+  #   a vector of values V0, K1, and k2, respectively.
   temp <- ErrorAndK1vsV0(t, ca.star, m.star, Ve)
   n <- which.min(temp[,"error"])
-  return(temp[n,c("V0","K1")])
+  ans <- c(temp[n,c("V0","K1")], temp[n,"K1"]/Ve)
+  names(ans)[3] <- "k2"
+  return(ans)
 }
 
 V0K1k2inCerebellum <- function(t, ca.star, m.star){
