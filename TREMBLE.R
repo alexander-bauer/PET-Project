@@ -1,53 +1,106 @@
-TREMBLE <- function(path, ab, region) {
+TREMBLE <- function(path, ab, region, debug=FALSE) {
   # path is the path to the directory containing the scans
   # ab is the prefix of the scans (a or b)
   # region is the brain region to look at
   hsa <- MergeTimes(ReadScan(path, c(paste(ab, "HSA", sep="")))) #get HSA data
   lsa <- MergeTimes(ReadScan(path, c(paste(ab, "LSA", sep="")))) #get LSA data
   
-  hsa.Cb.constants <- V0K1k2inCerebellum(hsa$Cb[,1], hsa$ca[,2], hsa$Cb[,2])
-  lsa.Cb.constants <- V0K1k2inCerebellum(lsa$Cb[,1], lsa$ca[,2], lsa$Cb[,2])
+  shsa <- AnalyzeScan(hsa, region)
+  slsa <- AnalyzeScan(lsa, region)
   
-  hsa.constants <- GetConstants(hsa[[region]][,1], hsa$ca[,2], hsa[[region]][,2],
-                                hsa.Cb.constants["K1"] / hsa.Cb.constants["k2"])
-  lsa.constants <- GetConstants(lsa[[region]][,1], lsa$ca[,2], lsa[[region]][,2],
-                                lsa.Cb.constants["K1"] / lsa.Cb.constants["k2"])
+  phsa <- GetRatios(hsa, shsa)
+  plsa <- GetRatios(lsa, slsa)
   
-  hsa.smoothderiv <- SmoothCurve(hsa[[region]][,1], hsa[[region]][,2],
-                             hsa$ca[,2], hsa.constants["V0"])
-  lsa.smoothderiv <- SmoothCurve(lsa[[region]][,1], lsa[[region]][,2],
-                                 lsa$ca[,2], lsa.constants["V0"])
+  points <- rbind(phsa, plsa)
+  rownames(points) <- c("HSA", "LSA")
   
-  hsa.k1ca <- approx(hsa[[region]][,1], (hsa.constants["K1"] * hsa$ca[,2]),
-                     xout=hsa.smoothderiv[,1])$y
-  lsa.k1ca <- approx(lsa[[region]][,1], (lsa.constants["K1"] * lsa$ca[,2]),
-                     xout=lsa.smoothderiv[,1])$y
+  return(list(
+    subject=basename(path),
+    type=ab,
+    region=region,
+    result=points))
+}
+
+GetRatios <- function(scan, analysis) {
+  # Args:
+  #  scan -- output of MergeTimes
+  #  analysis -- the return value from AnalyzeScan
+  #
+  # Returns a two-wide vector containing pB and mbmax/SA
+  imaxtracerintissue <- which.max(analysis$me + analysis$mb)
+  idx <- analysis$t >= analysis$t[imaxtracerintissue]
   
-  hsa.me <- (hsa.k1ca - hsa.smoothderiv[,2])/hsa.constants["k2"]
-  lsa.me <- (lsa.k1ca - lsa.smoothderiv[,2])/lsa.constants["k2"]
-  
-  hsa.mb <- hsa.smoothderiv[,2] - hsa.me
-  lsa.mb <- lsa.smoothderiv[,2] - lsa.me
-  
-  hsa.ipeakmb <- which.max(hsa.mb)
-  lsa.ipeakmb <- which.max(lsa.mb)
-  
-  hsa.pB <- hsa.mb[hsa.ipeakmb]/hsa.me[hsa.ipeakmb]
-  lsa.pB <- lsa.mb[lsa.ipeakmb]/lsa.me[lsa.ipeakmb]
-  
-  hsa.mboverSA <- hsa.mb[hsa.ipeakmb]/hsa[["SA"]]
-  lsa.mboverSA <- lsa.mb[lsa.ipeakmb]/lsa[["SA"]]
+  imaxmb <- which.max(analysis$mb[idx]) + imaxtracerintissue
+  #TODO: improve the max-finding method
   
   
+  pB <- analysis$mb[imaxmb]/analysis$me[imaxmb]
+  mbmax.over.SA <- analysis$mb[imaxmb]/scan$SA
   
-#   +2. For each scan and one specific region, say LCN
-#   +----Estimate V0, K1, and k2 using K1_V0_utils.R
-#   +----Using V0, form and differentiate tracer in tissue
-#   +----Using K1 and k2, solve for me
-#   +----Subtract me from tracer in tissue to form mb
-#   +----Find the peak value of mb, and the ratio mb/me at this point. The ratio, me/mb, is called binding potential, pB.
-#   +----Divide mb.peak by specific activity. (Converts from counts of radioactive tracer, to total tracer, hot plus cold)
-#   3. Plot the two (mb.peak/SA, pB) pairs on a graph and connect them with a line. (In principle, not literally.)
-#   ---- The NEGATIVE of the slope of that line is K_D, the Michaelis half-saturation concentration (If I remember correctly. It may be K_M, the half-sat constant.)  
-#   ---- The intercept of that line is B'max, which estimates the available receptors. It's called the binding capacity after blockade by inhibitors.
+  return(c(pB=pB, mbmax.over.SA=mbmax.over.SA))
+}
+
+AnalyzeScan <- function(scan,roi){
+  # Estimates V0, K1, k2, me, and mb for the given scan and region.
+  # Also returns the time scale, t, and the derivative of tracer in tissue
+  #
+  # Args:
+  #   scan -- a list of TACs and SA on a common time base, 
+  #           as given by MergeTimes(ReadScan...)
+  #   roi -- the region of interest, a string, 'LCN', 'RCN', 'LPu', 'RPu'
+  # Returns a list containing
+  #   V0, K1, k2 -- for the region of interest
+  #   me -- activity of exchangable tracer as estimated by 
+  #         numerical solution of BBB equation, a vector
+  #   mb -- activity of bound tracer, tracer in tissue minus me, a vector
+  #   d.dt -- estimated derivative of tracer in tissue, a vector
+  #   t  -- time base of me, mb, and d.dt
+  
+  # Estimate V0, K1, and k2 for cerebellum
+  Cb.constants <- V0K1k2inCerebellum(scan$Cb[,1], scan$ca[,2], scan$Cb[,2])
+  # Using Ve = K1/k2 for cerebellum, estimate V0, K1, and k2 for the region
+  Ve <- Cb.constants["K1"] / Cb.constants["k2"]
+  roi.constants <- GetConstants(scan[[roi]][,1], 
+                                scan$ca[,2], scan[[roi]][,2], Ve)
+  # Smooth tracer in tissue, m*-V0ca*.
+  rough.tracer.in.tissue <- scan[[roi]][,2] - roi.constants["V0"]*scan$ca[,2]
+  #    NOTE: SmoothTracerInTissue returns a list, whose first item is smoothed
+  #    input. The next item is a deprecated derivative, ignored here.
+  tracer.in.tissue <- SmoothTracerInTissue(scan[[roi]][,1],
+                                           rough.tracer.in.tissue)[[1]]
+  # Estimate the derivative of m*-V0ca*.
+  deriv <- SmoothCurve(scan[[roi]][,1], scan[[roi]][,2],
+                       scan$ca[,2], roi.constants["V0"])
+  # Put smoothed tracer in tissue on the same time base as its derivative
+  tracer.in.tissue <- approx(tracer.in.tissue[,1],
+                             tracer.in.tissue[,2],
+                             xout = deriv[,1])$y
+  # Put plasma on the same time base
+  ca <- approx(scan$ca[,1], scan$ca[,2], xout = deriv[,1])$y
+  # Calculate me
+  me <- (roi.constants["K1"]*ca - deriv[,2])/roi.constants["k2"]
+  # Calculate mb
+  mb <- tracer.in.tissue - me
+  return(list(V0 = roi.constants["V0"],
+              K1 = roi.constants["K1"],
+              k2 = roi.constants["k2"],
+              me = me,
+              mb = mb,
+              t  = deriv[,1],
+              d.dt = deriv[,2]))
+}
+
+ScanIsPresent <- function(path,condition){
+  # Returns TRUE if all data for the given condition, 'aLSA', 'aHSA', 'bLSA',
+  # or 'bHSA" is present. This will only work for data sets 1 and 2.
+  #
+  # Args:
+  #   path: a string, path to the data directory
+  #   condition: one of 'aHSA', 'aLSA', 'bHSA', or 'bLSA'
+  ls.dir <- dir(path)
+  present <- ls.dir[grep(condition,ls.dir)]
+  has.plasma <- length(grep('plasma',present)) > 0
+  has.SA <- length(grep('[[:punct:]]SA',present)) > 0
+  has.5.TACs <- length(grep('[[:punct:]]TAC',present)) == 5
+  return(has.plasma && has.SA && has.5.TACs)
 }
