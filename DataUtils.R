@@ -1,4 +1,4 @@
-path.raw.2008 <- '../../securedata/RAC_material_1_Sept_2008'
+path.raw.2008 <- '../securedata/RAC_material_1_Sept_2008'
 
 ReadScan <- function(path,scan){
   # Reads a scan, such as 'aHSA', for a subject, such as 1 for Sept 2008 data.
@@ -110,7 +110,7 @@ ListTacFiles <- function(path) {
 }
 
 # ListTacFiles <- function(subject){
-#   raw.tac.dir <- '../../securedata/RAC_material_1_Sept_2008'
+#   raw.tac.dir <- '../securedata/RAC_material_1_Sept_2008'
 #   n <- as.character(subject)
 #   if(subject<10){
 #     n <- paste('0',n,sep='')
@@ -162,7 +162,7 @@ Load2008HSAModel <- function(subject,region,condition){
   # m.star -- activity in region of interest
   # ca.star -- plasma activity
   # t -- common time base for all TACs
-  data.dir <- '../../securedata/HSA_analyses_for_Sept_2008'
+  data.dir <- '../securedata/HSA_analyses_for_Sept_2008'
   bname <- paste(paste(subject,condition,region,sep='_'),'.RData',sep="")
   load(paste(data.dir,bname,sep='/'))
   return(s)
