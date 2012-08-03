@@ -1,0 +1,143 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"
+ "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en">
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+  <meta http-equiv="Content-Style-Type" content="text/css" />
+  <meta name="generator" content="pandoc" />
+  <meta name="author" content="Sasha Bauer" />
+  <meta name="date" content="2012-12-07" />
+  <title>Finding \(m_e\) and \(m_b\) Numerically in HSA and LSA Data</title>
+  <link rel="stylesheet" type="text/css" media="screen, projection, print"
+    href="http://www.w3.org/Talks/Tools/Slidy2/styles/slidy.css" />
+  <script src="https://d3eoax9i5htok0.cloudfront.net/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML" type="text/javascript"></script>
+  <script src="http://www.w3.org/Talks/Tools/Slidy2/scripts/slidy.js.gz"
+    charset="utf-8" type="text/javascript"></script>
+</head>
+<body>
+<div class="slide titlepage">
+  <h1 class="title">Finding \(m_e\) and \(m_b\) Numerically in HSA and LSA Data</h1>
+  <p class="author">
+Sasha Bauer
+  </p>
+  <p class="date">31/07/12</p>
+</div>
+<div class="section slide level1" id="executive-summary">
+<h1 id="executive-summary">Executive Summary</h1>
+<ul class="incremental">
+<li>Can Solve BBB Numerically</li>
+<li>Solutions Match Compartmental Model on HSA</li>
+<li>Works on LSA</li>
+<li>Qualifications</li>
+</ul>
+</div>
+<div class="section slide level1" id="can-solve-bbb-numerically">
+<h1 id="can-solve-bbb-numerically">Can Solve BBB Numerically</h1>
+<ul class="incremental">
+<li>Given the constants \(V_0\), \(K_1\), and \(k_2\),</li>
+<li>I can solve the blood-brain barrier equation, \[\frac{d}{dt}(m^* - V_0 c^*_a) = K_1 c^*_a - k_2 m_e\]</li>
+<li>and the mass-balance equation. \[m_e + m_b = m^* - V_0 c^*_a\]</li>
+<li>For \(m_e\) and \(m_b\), no other equations are necessary.</li>
+</ul>
+</div>
+<div class="section slide level1" id="solutions-match-compartmental-model-on-hsa">
+<h1 id="solutions-match-compartmental-model-on-hsa">Solutions Match Compartmental Model on HSA</h1>
+<ul class="incremental">
+<li>For HSA data, my results approximate compartmental model results.</li>
+<li>Also applies to LSA.</li>
+</ul>
+<div class="incremental">
+<p><img src="figure/detail-modelsub11.png" alt="plot of chunk modelsub1" /> <img src="figure/detail-modelsub12.png" alt="plot of chunk modelsub1" /></p>
+</div>
+
+</div>
+<div class="section slide level1" id="additional-examples">
+<h1 id="additional-examples">Additional Examples</h1>
+<p><img src="figure/detail-modelsub21.png" alt="plot of chunk modelsub2" /> <img src="figure/detail-modelsub22.png" alt="plot of chunk modelsub2" /></p>
+</div>
+<div class="section slide level1" id="additional-examples-1">
+<h1 id="additional-examples-1">Additional Examples</h1>
+<p><img src="figure/detail-modelsub31.png" alt="plot of chunk modelsub3" /> <img src="figure/detail-modelsub32.png" alt="plot of chunk modelsub3" /></p>
+</div>
+<div class="section slide level1" id="additional-examples-2">
+<h1 id="additional-examples-2">Additional Examples</h1>
+<p><img src="figure/detail-modelsub41.png" alt="plot of chunk modelsub4" /> <img src="figure/detail-modelsub42.png" alt="plot of chunk modelsub4" /></p>
+</div>
+<div class="section slide level1" id="additional-examples-3">
+<h1 id="additional-examples-3">Additional Examples</h1>
+<p><img src="figure/detail-modelsub51.png" alt="plot of chunk modelsub5" /> <img src="figure/detail-modelsub52.png" alt="plot of chunk modelsub5" /></p>
+</div>
+<div class="section slide level1" id="qualifications">
+<h1 id="qualifications">Qualifications</h1>
+<ul class="incremental">
+<li>Outliers remain to be examined</li>
+<li>Beginnings and ends can probably be fixed</li>
+<li>Have had no time for data sets two and three</li>
+<li>Still using prototyping tool, <em>locpoly</em></li>
+<li>Should port the compartmental analysis to R</li>
+</ul>
+</div>
+<div class="section slide level1" id="tremble">
+<h1 id="tremble">“TREMBLE”</h1>
+<ol class="incremental" style="list-style-type: decimal">
+<li>In Matlab, do compartmental analysis for HSA</li>
+<li>Assume \(V_0\), \(K_1\), \(k_2\) are the same for HSA and LSA</li>
+<li>In R, solve LSA case using my techniques</li>
+<li>Combine results to get \(B^\prime _{max}\) and \(K_D\) (\(K_M\))</li>
+</ol>
+</div>
+<div class="section slide level1" id="bprime_max-vs.-k_d">
+<h1 id="bprime_max-vs.-k_d">\(B^\prime_{max}\) vs. \(K_D\)</h1>
+<pre><code>## Warning message: no non-missing arguments to min; returning Inf</code></pre>
+<pre><code>## Warning message: no non-missing arguments to max; returning -Inf</code></pre>
+<pre><code>## Warning message: no non-missing arguments to min; returning Inf</code></pre>
+<pre><code>## Warning message: no non-missing arguments to max; returning -Inf</code></pre>
+<pre><code>## Error: need finite &#39;xlim&#39; values</code></pre>
+<div class="figure">
+<img src="figure/detail-scatterplot.png" /><p class="caption"></p>
+</div>
+</div>
+<div class="section slide level1" id="technology">
+<h1 id="technology">Technology</h1>
+<ul class="incremental">
+<li>Matlab</li>
+<li>R</li>
+<li>RStudio</li>
+<li>Local Polynomial Fitting</li>
+</ul>
+</div>
+<div class="section slide level1" id="matlab">
+<h1 id="matlab">Matlab</h1>
+<div class="figure">
+<img src="figure/Matlab_screenshot.png" /><p class="caption"></p>
+</div>
+</div>
+<div class="section slide level1" id="r">
+<h1 id="r">R</h1>
+<ul class="incremental">
+<li>“<em>R is a free software environment for statistical computing and graphics. Runs on a wide variety of UNIX platforms, Windows and MacOS.</em>”</li>
+</ul>
+<div class="incremental">
+<img src="figure/R_screenshot.png" />
+</div>
+
+</div>
+<div class="section slide level1" id="rstudio">
+<h1 id="rstudio">RStudio</h1>
+<p>Rstudio is an open-source IDE for R</p>
+<div class="figure">
+<img src="figure/RStudio_screenshot.png" /><p class="caption"></p>
+</div>
+</div>
+<div class="section slide level1" id="local-polynomial-fitting-locpoly">
+<h1 id="local-polynomial-fitting-locpoly">Local Polynomial Fitting (<em>locpoly</em>)</h1>
+<ul class="incremental">
+<li>Approximate data by polynomial “locally” and differentiate</li>
+<li>“Locally” means nearby errors are weighted more heavily</li>
+<li>“Weighting” varies with time</li>
+<li>The weighting schedule has been customized for PET data</li>
+</ul>
+</div>
+</body>
+</html>
