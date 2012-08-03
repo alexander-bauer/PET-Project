@@ -1,13 +1,15 @@
+path.raw.2008 <- '../../securedata/RAC_material_1_Sept_2008'
+
 ReadScan <- function(path,scan){
   # Reads a scan, such as 'aHSA', for a subject, such as 1 for Sept 2008 data.
   # 
   # Args:
-  #   subject: a number 1-21
+  #   subject: path to directory containing raw tac files etc.
   #   scan: 'aHSA', 'bHSA', 'aLSA', or 'bLSA'
   # 
   # Returns:
   #   a labeled list of time activity curves, identified by region, and specific
-  #   activity. Each TAC is a 2-column matrix, time and activity, resp. Plasa (ca)
+  #   activity. Each TAC is a 2-column matrix, time and activity, resp. Plasma (ca)
   #   and tissue will be sampled at different times.
   tac.files <- ListTacFiles(path)
   scan.files <- tac.files[grep(scan,tac.files)]
@@ -138,4 +140,30 @@ ReadTacFile <- function(path){
   }
   # Convert the list to a matrix of numbers and return it.
   return(t(sapply(temp,as.numeric,simplify="array")))
+}
+
+Load2008HSAModel <- function(subject,region,condition){
+  # Loads the results of a standard compartmental analysis of HSA
+  # data from the Sept 2008 data set. The analyses were performed
+  # in Matlab, and give estimates of rate constants, vascular volume
+  # of distribution, and bound and exchangeable tracer TACs. The
+  # raw data is also returned.
+  #
+  # Args:
+  # subject -- a string, 'Subject01', ..., 'Subject21'
+  # region -- region of interest, 'LCN', 'RCN', 'LPu', or 'RPu'
+  # condition -- 'aHSA' or 'bHSA'
+  #
+  # Returns a list containing:
+  # K1, k2, k3, k4, and V0 -- clearance, rate constants, and vascular volume of distribution
+  # mb -- bound tracer activity
+  # me -- exchangeable tracer activity
+  # SA -- specific activity (e.g., mb/SA is in pmol/ml)
+  # m.star -- activity in region of interest
+  # ca.star -- plasma activity
+  # t -- common time base for all TACs
+  data.dir <- '../../securedata/HSA_analyses_for_Sept_2008'
+  bname <- paste(paste(subject,condition,region,sep='_'),'.RData',sep="")
+  load(paste(data.dir,bname,sep='/'))
+  return(s)
 }

@@ -1,24 +1,81 @@
-TREMBLE <- function(path, ab, region, debug=FALSE) {
-  # path is the path to the directory containing the scans
+RoughTREMBLE <- function(subject, ab, region, plot=FALSE) {
+  # subject - String such as "Subject01"
   # ab is the prefix of the scans (a or b)
   # region is the brain region to look at
-  hsa <- MergeTimes(ReadScan(path, c(paste(ab, "HSA", sep="")))) #get HSA data
-  lsa <- MergeTimes(ReadScan(path, c(paste(ab, "LSA", sep="")))) #get LSA data
+  raw.path <- "../../securedata/RAC_material_1_Sept_2008/"
+  subject.path <- paste(raw.path, subject, sep="")
   
-  shsa <- AnalyzeScan(hsa, region)
-  slsa <- AnalyzeScan(lsa, region)
+  if(!ScanIsPresent(subject.path, paste(ab, "LSA", sep=""))) {return(NULL)}
   
-  phsa <- GetRatios(hsa, shsa)
-  plsa <- GetRatios(lsa, slsa)
+  s <- Load2008HSAModel(subject, region, paste(ab, "HSA", sep=""))
   
-  points <- rbind(phsa, plsa)
-  rownames(points) <- c("HSA", "LSA")
+  lsa <- MergeTimes(ReadScan(subject.path,
+                             paste(ab, "LSA", sep=""))) #get LSA data
   
-  return(list(
-    subject=basename(path),
-    type=ab,
-    region=region,
-    result=points))
+  lsa.bbb <- LoessBBB(SolveBBB(lsa$ca[,1], lsa$ca[,2], lsa[[region]][,2],
+                               s$V0, s$K1, s$k2))
+  
+  idx <- lsa.bbb$t > 5 & lsa.bbb$t < 25
+  shift <- sum((lsa.bbb$t <= 5), na.rm=TRUE) #count the number of TRUEs
+  
+  i.max <- which.max(lsa.bbb$mb.loess[idx]) + shift
+  
+  lsa.mb.max <- lsa.bbb$mb[i.max]/lsa$SA
+  lsa.pB <- lsa.bbb$mb[i.max]/lsa.bbb$me[i.max]
+  
+  hsa.mb.max <- max(s$mb/s$SA)
+  hsa.pB <- s$k3/s$k4
+  
+  pB <- c(hsa.pB, lsa.pB)
+  mb.max <- c(hsa.mb.max, lsa.mb.max)
+  mdl <- lm(mb.max ~ pB)
+  KD <- as.numeric(-mdl$coefficients[2])
+  Bmax <- as.numeric(mdl$coefficients[1])
+  
+  
+  if(plot)
+  {
+    matplot(lsa.bbb$t, cbind(lsa.bbb$me.loess, lsa.bbb$mb.loess),
+            type='l', col=c(3, 2))
+    abline(v=5, col=2)
+    abline(v=25, col=2)
+    abline(v=lsa.bbb$t[i.max], col=1)
+  }
+  
+  output <- data.frame(hsa.pB=hsa.pB,
+                       hsa.mb.max=hsa.mb.max,
+                       lsa.pB=lsa.pB,
+                       lsa.mb.max=lsa.mb.max,
+                       KD=KD,
+                       Bmax=Bmax)
+    
+  return(output)
+}
+
+
+PlotRoughTREMBLE <- function(a.segments, b.segments, col, main){
+  # Given data frames whose rows are RoughTremble outputs, plot
+  # the a.segments in color col[1], the b.segments in color col[2]
+  
+  # Change the column names to permit following rbind
+  names(a.segments) <- names(b.segments) <- c("pB", "mb.max", "pB", "mb.max",
+                                              "KD", "Bmax")
+  
+  # Set up the scale and labels
+  plot(rbind(a.segments[,1:2],
+             a.segments[,3:4],
+             b.segments[,1:2],
+             b.segments[,3:4]),
+       type='n',
+       xlab='Binding Potential', ylab='Max mb (pmol/ml)', main=main)
+  # Plot the a segments
+  segments(x0=a.segments[,1], y0=a.segments[,2],
+           x1=a.segments[,3], y1=a.segments[,4],
+           col=col[1],lty=1)
+  # Plot the b segments
+  segments(x0=b.segments[,1], y0=b.segments[,2],
+           x1=b.segments[,3], y1=b.segments[,4],
+           col=col[2],lty=1)
 }
 
 GetRatios <- function(scan, analysis) {
@@ -76,7 +133,9 @@ AnalyzeScan <- function(scan,roi){
                              tracer.in.tissue[,2],
                              xout = deriv[,1])$y
   # Put plasma on the same time base
-  ca <- approx(scan$ca[,1], scan$ca[,2], xout = deriv[,1])$y
+  ca <- SmoothPlasmaTac(scan$ca[,1], scan$ca[,2])
+  ca <- approx(ca[,1], ca[,2], xout = deriv[,1])$y
+  
   # Calculate me
   me <- (roi.constants["K1"]*ca - deriv[,2])/roi.constants["k2"]
   # Calculate mb
